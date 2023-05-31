@@ -3,6 +3,10 @@ package efs.task.reflection;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.Collections;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.*;
 
 public class ClassInspector {
 
@@ -15,10 +19,16 @@ public class ClassInspector {
    * @param annotation szukana adnotacja
    * @return lista zawierająca tylko unikalne nazwy pól oznaczonych adnotacją
    */
-  public static Collection<String> getAnnotatedFields(final Class<?> type,
-      final Class<? extends Annotation> annotation) {
-    //TODO usuń zawartość tej metody i umieść tutaj swoje rozwiązanie
-    return Collections.emptyList();
+  public static Collection<String> getAnnotatedFields(final Class<?> type, final Class<? extends Annotation> annotation) {
+    Set<String> annotatedFields = new HashSet<>();
+    Field[] fields = type.getDeclaredFields();
+
+    for (Field field : fields) {
+      if (field.isAnnotationPresent(annotation)) {
+        annotatedFields.add(field.getName());
+      }
+    }
+    return annotatedFields;
   }
 
   /**
@@ -31,8 +41,23 @@ public class ClassInspector {
    * implementowane
    */
   public static Collection<String> getAllDeclaredMethods(final Class<?> type) {
-    //TODO usuń zawartość tej metody i umieść tutaj swoje rozwiązanie
-    return Collections.emptyList();
+    Set<String> allDeclaredMethods = new HashSet<>();
+    Method[] methods = type.getDeclaredMethods();
+
+    for (Method method : methods) {
+      allDeclaredMethods.add(method.getName());
+    }
+
+    Class<?>[] interfaces = type.getInterfaces();
+
+    for (Class<?> anInterface : interfaces) {
+      Method[] interfaceMethods = anInterface.getDeclaredMethods();
+      for (Method interfaceMethod : interfaceMethods) {
+        allDeclaredMethods.add(interfaceMethod.getName());
+      }
+    }
+
+    return allDeclaredMethods;
   }
 
   /**
@@ -50,7 +75,29 @@ public class ClassInspector {
    * @throws Exception wyjątek spowodowany nie znalezieniem odpowiedniego konstruktora
    */
   public static <T> T createInstance(final Class<T> type, final Object... args) throws Exception {
-    //TODO usuń zawartość tej metody i umieść tutaj swoje rozwiązanie
-    return null;
+    Constructor<?>[] constructors = type.getDeclaredConstructors();
+
+    for (Constructor<?> constructor : constructors) {
+      Class<?>[] parameterTypes = constructor.getParameterTypes();
+
+      if (args.length == parameterTypes.length) {
+        boolean match = true;
+
+        for (int i = 0; i < args.length; i++) {
+          if (!parameterTypes[i].isInstance(args[i])) {
+            match = false;
+            break;
+          }
+        }
+
+        if (match) {
+          constructor.setAccessible(true);
+          return type.cast(constructor.newInstance(args));
+        }
+      }
+    }
+
+    throw new Exception("Constructor not found for the specified arguments");
   }
+
 }
